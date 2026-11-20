@@ -1,0 +1,37 @@
+name: Daily Ingest APIs to PRO Bronze
+
+on:
+  schedule:
+    # 20:00 UTC = 21:00 en invierno / 22:00 en verano (PVPC de mañana ya publicado)
+    - cron: '0 20 * * *'
+  workflow_dispatch:
+    inputs:
+      days_offset:
+        description: '0 = hoy, 1 = mañana (usar 1 solo a partir de las 20:30)'
+        required: true
+        default: '0'
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests snowflake-connector-python
+
+      - name: Run ingestion to DOMO_PRO_BRONZE_DB
+        env:
+          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+          SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+          AEMET_API_KEY: ${{ secrets.AEMET_API_KEY }}
+          AEMET_MUNICIPIO_INE: '18087'
+          DAYS_OFFSET: ${{ github.event.inputs.days_offset || '1' }}
+        run: python ingestion/ingest_pro_bronze.py
