@@ -11,9 +11,10 @@ import snowflake.connector
 SF_ACCOUNT = os.environ["SNOWFLAKE_ACCOUNT"]
 SF_USER = os.environ["SNOWFLAKE_USER"]
 SF_PASSWORD = os.environ["SNOWFLAKE_PASSWORD"]
-AEMET_API_KEY = os.environ["AEMET_API_KEY"]
 
-MUNICIPIO_INE = os.getenv("AEMET_MUNICIPIO_INE", "18087")  # 18087 = Granada
+HOME_CITY = os.getenv("HOME_CITY", "Granada")
+HOME_LAT = float(os.getenv("HOME_LAT", "37.1773"))
+HOME_LON = float(os.getenv("HOME_LON", "-3.5986"))
 DAYS_OFFSET = int(os.getenv("DAYS_OFFSET", "0"))  # 0 = hoy, 1 = mañana (tras las 20:30)
 
 DATABASE = "DOMO_PRO_BRONZE_DB"
@@ -35,27 +36,26 @@ def fetch_ree_pvpc(target_date: str) -> dict:
         "end_date": f"{target_date}T23:59",
         "time_trunc": "hour",
     }
-    resp = requests.get(url, params=params, timeout=30)
+    resp = requests.get(url, params=params, headers={"Accept": "application/json"}, timeout=30)
     resp.raise_for_status()
     return resp.json()
 
 
-def fetch_aemet_forecast(municipio: str) -> list:
-    url = f"https://opendata.aemet.es/opendata/api/prediccion/especifica/municipio/horaria/{municipio}"
-    headers = {"api_key": AEMET_API_KEY}
-
-    # Paso 1: obtener URL temporal de datos
-    resp_meta = requests.get(url, headers=headers, timeout=30)
-    resp_meta.raise_for_status()
-    meta = resp_meta.json()
-    if meta.get("estado") != 200 or "datos" not in meta:
-        raise RuntimeError(f"Error en AEMET paso 1: {meta}")
-
-    # Paso 2: descargar JSON real (viene en ISO-8859-15)
-    resp_data = requests.get(meta["datos"], timeout=30)
-    resp_data.raise_for_status()
-    resp_data.encoding = "iso-8859-15"
-    return resp_data.json()
+def fetch_openmeteo_forecast(lat: float, lon: float) -> dict:
+    url = "https://api.open-meteo.com/v1/forecast"
+    params = {
+        "latitude": lat,
+        "longitude": lon,
+        "hourly": "temperature_2m,relative_humidity_2m,precipitation_probability",
+        "timezone": "Europe/Madrid",
+        "forecast_days": 2,  # Hoy + mañana (48h)
+    }
+    resp = requests.get(url, params=params, timeout=30)
+    resp.raise_for_status()
+    data = resp.json()
+    if data.get("error"):
+        raise RuntimeError(f"Error en Open-Meteo: {data.get('reason')}")
+    return data
 
 
 def upload_and_copy(cur, payload, filename: str, copy_sql: str):
@@ -79,8 +79,8 @@ def main():
     print(f"Descargando REData PVPC para {target_date}...")
     ree_data = fetch_ree_pvpc(target_date)
 
-    print(f"Descargando AEMET horaria para municipio {MUNICIPIO_INE}...")
-    aemet_data = fetch_aemet_forecast(MUNICIPIO_INE)
+    print(f"Descargando Open-Meteo horario para {HOME_CITY} ({HOME_LAT}, {HOME_LON})...")
+    meteo_data = fetch_openmeteo_forecast(HOME_LAT, HOME_LON)
 
     conn = snowflake.connector.connect(
         account=SF_ACCOUNT,
@@ -112,22 +112,22 @@ def main():
         upload_and_copy(cur, ree_data, ree_file, ree_copy_sql)
         print(f"OK -> Cargado {ree_file} en REE_PVPC_RAW")
 
-        # 2. Cargar AEMET
-        aemet_file = f"aemet_{MUNICIPIO_INE}_{run_ts}.json"
-        aemet_copy_sql = f"""
-            COPY INTO {DATABASE}.{SCHEMA}.AEMET_FORECAST_RAW (MUNICIPIO, FILE_NAME, RAW_JSON)
+        # 2. Cargar Open-Meteo
+        meteo_file = f"openmeteo_{HOME_CITY.lower()}_{run_ts}.json"
+        meteo_copy_sql = f"""
+            COPY INTO {DATABASE}.{SCHEMA}.OPENMETEO_FORECAST_RAW (UBICACION, FILE_NAME, RAW_JSON)
             FROM (
                 SELECT
-                    '{MUNICIPIO_INE}',
+                    '{HOME_CITY}',
                     METADATA$FILENAME,
                     $1
-                FROM {STAGE}/{aemet_file}.gz
+                FROM {STAGE}/{meteo_file}.gz
             )
             FILE_FORMAT = (FORMAT_NAME = '{FILE_FORMAT}')
             ON_ERROR = 'ABORT_STATEMENT'
         """
-        upload_and_copy(cur, aemet_data, aemet_file, aemet_copy_sql)
-        print(f"OK -> Cargado {aemet_file} en AEMET_FORECAST_RAW")
+        upload_and_copy(cur, meteo_data, meteo_file, meteo_copy_sql)
+        print(f"OK -> Cargado {meteo_file} en OPENMETEO_FORECAST_RAW")
 
     finally:
         conn.close()
