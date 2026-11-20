@@ -2,7 +2,7 @@
 # Name your project! Project names should contain only lowercase characters
 # and underscores. A good package name should reflect your organization's
 # name or the intended use of these models
-name: 'my_new_project'
+name: 'domotizacion_energia'
 version: '1.0.0'
 config-version: 2
 
@@ -35,8 +35,41 @@ clean-targets:         # directories to be removed by `dbt clean`
 # continue to be built as views. These settings can be overridden in the individual model files
 # using the `{{ config(...) }}` macro.
 
+seeds:
+  domotizacion_energia: # <-- Mismo name exacto
+    +database: "{{ 'DOMO_PRO_SILVER_DB' if target.name == 'pro' else 'DOMO_DEV_SILVER_DB' }}"
+    +schema: seeds
+    catalogo_termo:
+      +column_types:
+        dispositivo_id: varchar(50)
+        nombre_dispositivo: varchar(100)
+        capacidad_litros: integer
+        potencia_nominal_kw: float
+        horas_base_dia: integer
+
+
 models:
-  my_new_project:
-    # Applies to all files under models/example/
-    example:
+  domotizacion_energia: # <-- Mismo name exacto
+    staging:
+      +database: "{{ 'DOMO_PRO_SILVER_DB' if target.name == 'pro' else 'DOMO_DEV_SILVER_DB' }}"
+      +schema: staging
+      +materialized: view
+      +tags: ['staging']
+    silver:
+      +database: "{{ 'DOMO_PRO_SILVER_DB' if target.name == 'pro' else 'DOMO_DEV_SILVER_DB' }}"
+      +schema: silver
       +materialized: table
+      +tags: ['silver']
+    gold:
+      +database: "{{ 'DOMO_PRO_GOLD_DB' if target.name == 'pro' else 'DOMO_DEV_GOLD_DB' }}"
+      +tags: ['gold']
+      +grants:
+        select: ['DOMO_REPORTING_ROLE']
+      core:
+        +schema: core
+        +materialized: table
+        +tags: ['core']
+      energy:
+        +schema: energia
+        +materialized: view
+        +tags: ['energy']

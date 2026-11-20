@@ -1,0 +1,27 @@
+version: 2
+
+seeds:
+  - name: catalogo_termo
+    description: "Parámetros técnicos estáticos del termo eléctrico principal (100L, 1200W)."
+    columns:
+      - name: dispositivo_id
+        description: "Identificador único del dispositivo."
+        data_tests:
+          - unique
+          - not_null
+      - name: nombre_dispositivo
+        description: "Nombre descriptivo del equipo."
+        data_tests:
+          - not_null
+      - name: capacidad_litros
+        description: "Capacidad del depósito en litros."
+        data_tests:
+          - not_null
+      - name: potencia_nominal_kw
+        description: "Potencia eléctrica nominal en kW (1200W = 1.2 kW)."
+        data_tests:
+          - not_null
+      - name: horas_base_dia
+        description: "Horas base diarias recomendadas de encendido."
+        data_tests:
+          - not_null
