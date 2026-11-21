@@ -1,0 +1,17 @@
+version: 2
+
+models:
+  - name: slv_energia__contexto_horario
+    description: "Tabla horaria unificada (1:1) con precio PVPC y previsión meteorológica exterior de Granada."
+    columns:
+      - name: fecha_hora_pk
+        description: "Clave primaria horaria en hora local Europe/Madrid (TIMESTAMP_NTZ)."
+        data_tests:
+          - unique
+          - not_null
+      - name: precio_eur_kwh
+        description: "Precio oficial PVPC en €/kWh."
+        data_tests:
+          - not_null
+      - name: temperatura_ext_c
+        description: "Temperatura exterior prevista (°C)."

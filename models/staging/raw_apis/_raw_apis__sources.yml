@@ -1,0 +1,36 @@
+version: 2
+
+sources:
+  - name: raw_apis
+    description: "Capa Bronze: JSON crudos ingestados diariamente desde REData (PVPC) y Open-Meteo."
+    database: "{{ env_var('DBT_BRONZE_DB', 'DOMO_PRO_BRONZE_DB') }}"
+    schema: raw_apis
+    config:
+      loaded_at_field: ingested_at
+      freshness:
+        warn_after: { count: 26, period: hour }
+        error_after: { count: 48, period: hour }
+    tables:
+      - name: ree_pvpc_raw
+        description: "Precios horarios PVPC en bruto descargados de REData (Red Eléctrica)."
+        columns:
+          - name: ingested_at
+            description: "Timestamp UTC de carga en Snowflake."
+          - name: target_date
+            description: "Fecha objetivo de los precios descargados."
+          - name: file_name
+            description: "Nombre del fichero JSON subido al stage interno."
+          - name: raw_json
+            description: "Payload JSON íntegro almacenado como VARIANT."
+
+      - name: openmeteo_forecast_raw
+        description: "Predicción meteorológica horaria en bruto para Granada (Open-Meteo)."
+        columns:
+          - name: ingested_at
+            description: "Timestamp UTC de carga en Snowflake."
+          - name: ubicacion
+            description: "Etiqueta de la ubicación consultada (Granada)."
+          - name: file_name
+            description: "Nombre del fichero JSON subido al stage interno."
+          - name: raw_json
+            description: "Payload JSON íntegro almacenado como VARIANT."
