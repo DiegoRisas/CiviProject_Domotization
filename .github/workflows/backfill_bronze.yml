@@ -1,0 +1,49 @@
+name: Backfill Historico a Bronze
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_date:
+        description: 'Fecha inicio (YYYY-MM-DD)'
+        required: true
+        default: '2026-11-01'
+      end_date:
+        description: 'Fecha fin (YYYY-MM-DD). Vacío = hoy (hora Madrid)'
+        required: false
+        default: ''
+      target_env:
+        description: 'Entorno destino en Snowflake'
+        required: true
+        type: choice
+        default: 'PRO'
+        options:
+          - PRO
+          - DEV
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests snowflake-connector-python
+
+      - name: Ejecutar backfill en Snowflake Bronze
+        env:
+          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+          SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+          HOME_CITY: 'Granada'
+          HOME_LAT: '37.1773'
+          HOME_LON: '-3.5986'
+          START_DATE: ${{ inputs.start_date }}
+          END_DATE: ${{ inputs.end_date }}
+          TARGET_ENV: ${{ inputs.target_env }}
+        run: python ingestion/backfill_bronze.py
