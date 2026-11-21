@@ -31,16 +31,27 @@ def get_target_date() -> str:
 
 
 def get_with_retries(url: str, params: dict, headers: dict | None = None, attempts: int = 4) -> dict:
+    last_exc = None
     for attempt in range(1, attempts + 1):
-        resp = requests.get(url, params=params, headers=headers, timeout=30)
-        if resp.status_code in (500, 502, 503, 504):
+        try:
+            resp = requests.get(url, params=params, headers=headers, timeout=30)
+            if resp.status_code in (500, 502, 503, 504):
+                wait = attempt * 15
+                print(f"Error HTTP {resp.status_code} en {url} (intento {attempt}/{attempts}). Reintentando en {wait}s...")
+                time.sleep(wait)
+                continue
+            resp.raise_for_status()
+            return resp.json()
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as exc:
+            last_exc = exc
+            if attempt == attempts:
+                raise
             wait = attempt * 15
-            print(f"Error {resp.status_code} en {url} (intento {attempt}/{attempts}). Reintentando en {wait}s...")
+            print(f"Timeout/conexión en {url} (intento {attempt}/{attempts}): {exc}. Reintentando en {wait}s...")
             time.sleep(wait)
-            continue
-        resp.raise_for_status()
-        return resp.json()
 
+    if last_exc:
+        raise last_exc
     resp.raise_for_status()
 
 
