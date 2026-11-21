@@ -1,0 +1,37 @@
+version: 2
+
+unit_tests:
+  - name: test_plan_termo_dia_frio_activa_hora_extra
+    description: "Verifica el reparto por bloques y que con temperatura media < 10 °C se enciende 1 hora extra en la siguiente hora más barata."
+    model: fct_plan_termo_horario
+    overrides:
+      macros:
+        is_incremental: false
+    given:
+      - input: ref('dim_termo')
+        rows:
+          - {termo_sk: 'termo_1', potencia_nominal_kw: 1.2}
+      - input: ref('dim_tiempo_horario')
+        rows:
+          - {fecha_hora_pk: '2026-11-22 02:00:00', fecha: '2026-11-22', hora: 2,  bloque_dia: 'Madrugada'}
+          - {fecha_hora_pk: '2026-11-22 03:00:00', fecha: '2026-11-22', hora: 3,  bloque_dia: 'Madrugada'}
+          - {fecha_hora_pk: '2026-11-22 12:00:00', fecha: '2026-11-22', hora: 12, bloque_dia: 'Mediodia'}
+          - {fecha_hora_pk: '2026-11-22 13:00:00', fecha: '2026-11-22', hora: 13, bloque_dia: 'Mediodia'}
+          - {fecha_hora_pk: '2026-11-22 22:00:00', fecha: '2026-11-22', hora: 22, bloque_dia: 'Tarde_Noche'}
+          - {fecha_hora_pk: '2026-11-22 23:00:00', fecha: '2026-11-22', hora: 23, bloque_dia: 'Tarde_Noche'}
+      - input: ref('slv_energia__contexto_horario')
+        rows:
+          - {fecha_hora_pk: '2026-11-22 02:00:00', precio_eur_kwh: 0.08, temperatura_ext_c: 8.0, humedad_relativa_pct: 60}
+          - {fecha_hora_pk: '2026-11-22 03:00:00', precio_eur_kwh: 0.09, temperatura_ext_c: 8.0, humedad_relativa_pct: 60}
+          - {fecha_hora_pk: '2026-11-22 12:00:00', precio_eur_kwh: 0.10, temperatura_ext_c: 8.0, humedad_relativa_pct: 60}
+          - {fecha_hora_pk: '2026-11-22 13:00:00', precio_eur_kwh: 0.12, temperatura_ext_c: 8.0, humedad_relativa_pct: 60}
+          - {fecha_hora_pk: '2026-11-22 22:00:00', precio_eur_kwh: 0.11, temperatura_ext_c: 8.0, humedad_relativa_pct: 60}
+          - {fecha_hora_pk: '2026-11-22 23:00:00', precio_eur_kwh: 0.20, temperatura_ext_c: 8.0, humedad_relativa_pct: 60}
+    expect:
+      rows:
+        - {fecha_hora_pk: '2026-11-22 02:00:00', es_dia_frio: true, estado_termo: 'ON',  color_semaforo: 'VERDE'}
+        - {fecha_hora_pk: '2026-11-22 03:00:00', es_dia_frio: true, estado_termo: 'ON',  color_semaforo: 'VERDE'}
+        - {fecha_hora_pk: '2026-11-22 12:00:00', es_dia_frio: true, estado_termo: 'ON',  color_semaforo: 'VERDE'}
+        - {fecha_hora_pk: '2026-11-22 13:00:00', es_dia_frio: true, estado_termo: 'ON',  color_semaforo: 'VERDE'}
+        - {fecha_hora_pk: '2026-11-22 22:00:00', es_dia_frio: true, estado_termo: 'ON',  color_semaforo: 'VERDE'}
+        - {fecha_hora_pk: '2026-11-22 23:00:00', es_dia_frio: true, estado_termo: 'OFF', color_semaforo: 'ROJO'}

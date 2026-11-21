@@ -1,3 +1,10 @@
+{{ config(
+    materialized='incremental',
+    incremental_strategy='merge',
+    unique_key='fecha_hora_pk',
+    on_schema_change='append_new_columns'
+) }}
+
 with pvpc as (
     select * from {{ ref('stg_ree__pvpc') }}
 ),
@@ -21,3 +28,9 @@ select
 from pvpc as p
 left join clima as c
     on p.fecha_hora_pk = c.fecha_hora_pk
+{% if is_incremental() %}
+where p.fecha_hora_pk >= (
+    select dateadd('hour', -{{ var('lookback_hours', 48) }}, max(fecha_hora_pk))
+    from {{ this }}
+)
+{% endif %}
