@@ -1,6 +1,7 @@
 import json
 import os
 import tempfile
+import time
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -29,6 +30,20 @@ def get_target_date() -> str:
     return target.strftime("%Y-%m-%d")
 
 
+def get_with_retries(url: str, params: dict, headers: dict | None = None, attempts: int = 4) -> dict:
+    for attempt in range(1, attempts + 1):
+        resp = requests.get(url, params=params, headers=headers, timeout=30)
+        if resp.status_code in (500, 502, 503, 504):
+            wait = attempt * 15
+            print(f"Error {resp.status_code} en {url} (intento {attempt}/{attempts}). Reintentando en {wait}s...")
+            time.sleep(wait)
+            continue
+        resp.raise_for_status()
+        return resp.json()
+
+    resp.raise_for_status()
+
+
 def fetch_ree_pvpc(target_date: str) -> dict:
     url = "https://apidatos.ree.es/es/datos/mercados/precios-mercados-tiempo-real"
     params = {
@@ -36,23 +51,20 @@ def fetch_ree_pvpc(target_date: str) -> dict:
         "end_date": f"{target_date}T23:59",
         "time_trunc": "hour",
     }
-    resp = requests.get(url, params=params, headers={"Accept": "application/json"}, timeout=30)
-    resp.raise_for_status()
-    return resp.json()
+    return get_with_retries(url, params=params, headers={"Accept": "application/json"})
 
 
-def fetch_openmeteo_forecast(lat: float, lon: float) -> dict:
+def fetch_openmeteo_forecast(lat: float, lon: float, target_date: str) -> dict:
     url = "https://api.open-meteo.com/v1/forecast"
     params = {
         "latitude": lat,
         "longitude": lon,
         "hourly": "temperature_2m,relative_humidity_2m,precipitation_probability",
         "timezone": "Europe/Madrid",
-        "forecast_days": 2,  # Hoy + mañana (48h)
+        "start_date": target_date,
+        "end_date": target_date,  # Exactamente las mismas 24h que PVPC
     }
-    resp = requests.get(url, params=params, timeout=30)
-    resp.raise_for_status()
-    data = resp.json()
+    data = get_with_retries(url, params=params)
     if data.get("error"):
         raise RuntimeError(f"Error en Open-Meteo: {data.get('reason')}")
     return data
@@ -64,11 +76,9 @@ def upload_and_copy(cur, payload, filename: str, copy_sql: str):
         with open(filepath, "w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False)
 
-        # Subir al stage interno (Snowflake lo comprime a .gz)
         cur.execute(
             f"PUT 'file://{filepath}' {STAGE} AUTO_COMPRESS=TRUE OVERWRITE=TRUE"
         )
-        # Cargar en tabla Bronze
         cur.execute(copy_sql)
 
 
@@ -76,11 +86,11 @@ def main():
     target_date = get_target_date()
     run_ts = datetime.now(ZoneInfo("Europe/Madrid")).strftime("%Y%m%d_%H%M%S")
 
-    print(f"Descargando REData PVPC para {target_date}...")
+    print(f"Descargando REData PVPC (24h) para {target_date}...")
     ree_data = fetch_ree_pvpc(target_date)
 
-    print(f"Descargando Open-Meteo horario para {HOME_CITY} ({HOME_LAT}, {HOME_LON})...")
-    meteo_data = fetch_openmeteo_forecast(HOME_LAT, HOME_LON)
+    print(f"Descargando Open-Meteo (24h) para {HOME_CITY} en {target_date}...")
+    meteo_data = fetch_openmeteo_forecast(HOME_LAT, HOME_LON, target_date)
 
     conn = snowflake.connector.connect(
         account=SF_ACCOUNT,
@@ -113,7 +123,7 @@ def main():
         print(f"OK -> Cargado {ree_file} en REE_PVPC_RAW")
 
         # 2. Cargar Open-Meteo
-        meteo_file = f"openmeteo_{HOME_CITY.lower()}_{run_ts}.json"
+        meteo_file = f"openmeteo_{HOME_CITY.lower()}_{target_date}_{run_ts}.json"
         meteo_copy_sql = f"""
             COPY INTO {DATABASE}.{SCHEMA}.OPENMETEO_FORECAST_RAW (UBICACION, FILE_NAME, RAW_JSON)
             FROM (
