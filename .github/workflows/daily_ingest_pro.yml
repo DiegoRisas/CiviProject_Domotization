@@ -2,15 +2,15 @@ name: Daily Ingest APIs to PRO Bronze
 
 on:
   schedule:
-    # 20:00 UTC = 21:00 en invierno / 22:00 en verano (PVPC de mañana ya publicado)
-    - cron: '0 20 * * *'
+    # 19:43 UTC = 20:43 invierno (CET) / 21:43 verano (CEST)
+    # Evita el minuto :00 y da más de 3h de margen antes de medianoche
+    - cron: '43 19 * * *'
   workflow_dispatch:
     inputs:
       days_offset:
-        description: '0 = hoy, 1 = mañana (usar 1 solo a partir de las 20:30)'
+        description: 'auto = inteligente, 0 = hoy, 1 = mañana (tras las 20:30)'
         required: true
-        default: '0'
-
+        default: 'auto'
 jobs:
   ingest:
     runs-on: ubuntu-latest
@@ -34,5 +34,5 @@ jobs:
           HOME_CITY: 'Granada'
           HOME_LAT: '37.1773'
           HOME_LON: '-3.5986'
-          DAYS_OFFSET: ${{ github.event.inputs.days_offset || '1' }}
+          DAYS_OFFSET: ${{ github.event.inputs.days_offset || 'auto' }}
         run: python ingestion/ingest_pro_bronze.py
