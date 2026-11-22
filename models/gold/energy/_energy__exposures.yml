@@ -1,0 +1,13 @@
+version: 2
+
+exposures:
+  - name: panel_termo_24h
+    label: "Panel 24h Termo Eléctrico"
+    type: dashboard
+    maturity: low
+    description: "Panel visual de 24 horas (Verde/ON vs Rojo/OFF), temperatura exterior y coste diario estimado del termo consumido con DOMO_REPORTING_ROLE."
+    depends_on:
+      - ref('mart_panel_termo_24h')
+    owner:
+      name: Diego
+      email: diego@domotizacion.local

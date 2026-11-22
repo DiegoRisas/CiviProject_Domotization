@@ -1,0 +1,78 @@
+version: 2
+
+models:
+  - name: dim_tiempo_horario
+    description: "Dimensión horaria con atributos de calendario, tramo tarifario PVPC 2.0TD y bloque del día."
+    columns:
+      - name: fecha_hora_pk
+        description: "Clave primaria horaria en hora local Europe/Madrid (TIMESTAMP_NTZ)."
+        data_tests:
+          - unique
+          - not_null
+      - name: tramo_pvpc
+        description: "Periodo tarifario PVPC 2.0TD (Valle, Llano o Punta)."
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['Valle', 'Llano', 'Punta']
+      - name: bloque_dia
+        description: "Franja del día para distribuir el calentamiento del termo."
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['Madrugada', 'Mediodia', 'Tarde_Noche']
+
+  - name: dim_termo
+    description: "Dimensión técnica del termo eléctrico (escalable a dim_dispositivos en Fase 2)."
+    columns:
+      - name: termo_sk
+        description: "Clave subrogada del termo."
+        data_tests:
+          - unique
+          - not_null
+      - name: dispositivo_id
+        description: "Identificador natural del dispositivo."
+        data_tests:
+          - unique
+          - not_null
+          
+  - name: fct_plan_termo_horario
+    description: "Tabla de hechos horaria con la recomendación ON/OFF del termo, semáforo y coste estimado."
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - fecha_hora_pk
+            - termo_sk
+    columns:
+      - name: fecha_hora_pk
+        description: "FK a dim_tiempo_horario."
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('dim_tiempo_horario')
+              field: fecha_hora_pk
+      - name: termo_sk
+        description: "FK a dim_termo."
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('dim_termo')
+              field: termo_sk
+      - name: estado_termo
+        description: "Estado recomendado del termo (ON u OFF)."
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['ON', 'OFF']
+      - name: color_semaforo
+        description: "Color para el panel visual de 24h (VERDE o ROJO)."
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['VERDE', 'ROJO']
+      - name: coste_estimado_eur
+        description: "Coste eléctrico estimado de la hora en euros."
+        data_tests:
+          - not_null
+
+  

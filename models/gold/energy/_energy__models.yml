@@ -1,0 +1,62 @@
+version: 2
+
+models:
+  - name: mart_panel_termo_24h
+    description: "Vista final desnormalizada para el panel visual de 24h del termo (Verde/ON vs Rojo/OFF, temperatura y coste diario)."
+    config:
+      access: public
+      contract:
+        enforced: true
+    columns:
+      - name: fecha_hora_pk
+        data_type: timestamp_ntz
+        constraints:
+          - type: not_null
+      - name: fecha
+        data_type: date
+        constraints:
+          - type: not_null
+      - name: hora
+        data_type: integer
+        constraints:
+          - type: not_null
+      - name: dia_semana
+        data_type: varchar
+      - name: tramo_pvpc
+        data_type: varchar
+      - name: bloque_dia
+        data_type: varchar
+      - name: dispositivo_id
+        data_type: varchar
+        constraints:
+          - type: not_null
+      - name: nombre_dispositivo
+        data_type: varchar
+      - name: precio_eur_kwh
+        data_type: float
+        constraints:
+          - type: not_null
+      - name: temperatura_ext_c
+        data_type: float
+      - name: temp_media_dia_c
+        data_type: float
+      - name: es_dia_frio
+        data_type: boolean
+      - name: estado_termo
+        data_type: varchar
+        constraints:
+          - type: not_null
+      - name: color_semaforo
+        data_type: varchar
+        constraints:
+          - type: not_null
+      - name: consumo_estimado_kwh
+        data_type: float
+      - name: coste_estimado_eur
+        data_type: float
+      - name: consumo_total_dia_kwh
+        data_type: float
+      - name: coste_total_dia_eur
+        data_type: float
+      - name: total_horas_on_dia
+        data_type: integer
