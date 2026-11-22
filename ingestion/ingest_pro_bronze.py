@@ -16,7 +16,7 @@ SF_PASSWORD = os.environ["SNOWFLAKE_PASSWORD"]
 HOME_CITY = os.getenv("HOME_CITY", "Granada")
 HOME_LAT = float(os.getenv("HOME_LAT", "37.1773"))
 HOME_LON = float(os.getenv("HOME_LON", "-3.5986"))
-DAYS_OFFSET = int(os.getenv("DAYS_OFFSET", "0"))  # 0 = hoy, 1 = mañana (tras las 20:30)
+DAYS_OFFSET = os.getenv("DAYS_OFFSET", "auto").strip().lower()  # 'auto', '0' o '1'
 
 DATABASE = "DOMO_PRO_BRONZE_DB"
 SCHEMA = "RAW_APIS"
@@ -26,8 +26,17 @@ FILE_FORMAT = f"{DATABASE}.{SCHEMA}.FF_JSON_RAW"
 
 def get_target_date() -> str:
     tz_madrid = ZoneInfo("Europe/Madrid")
-    target = datetime.now(tz_madrid) + timedelta(days=DAYS_OFFSET)
-    return target.strftime("%Y-%m-%d")
+    now = datetime.now(tz_madrid)
+
+    if DAYS_OFFSET == "auto":
+        # REE publica los precios de mañana sobre las 20:15-20:30 (Europe/Madrid).
+        # Si el cron de GitHub Actions se retrasa y cruza medianoche, descarga hoy.
+        is_tomorrow_published = (now.hour > 20) or (now.hour == 20 and now.minute >= 30)
+        offset = 1 if is_tomorrow_published else 0
+    else:
+        offset = int(DAYS_OFFSET)
+
+    return (now + timedelta(days=offset)).strftime("%Y-%m-%d")
 
 
 def get_with_retries(url: str, params: dict, headers: dict | None = None, attempts: int = 4) -> dict:
