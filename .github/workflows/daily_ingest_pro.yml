@@ -36,3 +36,50 @@ jobs:
           HOME_LON: '-3.5986'
           DAYS_OFFSET: ${{ github.event.inputs.days_offset || 'auto' }}
         run: python ingestion/ingest_pro_bronze.py
+  
+  trigger_dbt_pro:
+    name: 2. Trigger dbt Platform Build (PRO)
+    needs: ingest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger dbt Job and wait for completion
+        env:
+          DBT_HOST: ${{ secrets.DBT_CLOUD_HOST }}
+          ACCOUNT_ID: ${{ secrets.DBT_CLOUD_ACCOUNT_ID }}
+          JOB_ID: ${{ secrets.DBT_CLOUD_JOB_ID }}
+          API_TOKEN: ${{ secrets.DBT_CLOUD_API_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          echo "Disparando Job ${JOB_ID} en dbt Platform..."
+          RESPONSE=$(curl -sS -X POST \
+            "https://${DBT_HOST}/api/v2/accounts/${ACCOUNT_ID}/jobs/${JOB_ID}/run/" \
+            -H "Authorization: Token ${API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d '{"cause": "Triggered by GitHub Actions after Bronze ingestion"}')
+
+          RUN_ID=$(echo "$RESPONSE" | jq -r '.data.id')
+          if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
+            echo "Error al disparar el job de dbt:"
+            echo "$RESPONSE"
+            exit 1
+          fi
+          echo "Run creado con ID: ${RUN_ID}"
+
+          # Polling hasta que termine (10=Success, 20=Error, 30=Cancelled)
+          while true; do
+            STATUS_RESP=$(curl -sS \
+              "https://${DBT_HOST}/api/v2/accounts/${ACCOUNT_ID}/runs/${RUN_ID}/" \
+              -H "Authorization: Token ${API_TOKEN}")
+            STATUS=$(echo "$STATUS_RESP" | jq -r '.data.status')
+            echo "Estado actual del run ${RUN_ID}: ${STATUS}"
+
+            if [ "$STATUS" = "10" ]; then
+              echo "dbt build en PRO completado con éxito."
+              exit 0
+            elif [ "$STATUS" = "20" ] || [ "$STATUS" = "30" ]; then
+              echo "dbt build en PRO falló o fue cancelado (status=${STATUS}). Revisa los logs en dbt Platform."
+              exit 1
+            fi
+            sleep 10
+          done
