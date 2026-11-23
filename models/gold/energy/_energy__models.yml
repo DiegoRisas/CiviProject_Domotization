@@ -60,3 +60,54 @@ models:
         data_type: float
       - name: total_horas_on_dia
         data_type: integer
+  - name: mart_resumen_mensual_termo
+    description: "Resumen mensual acumulado (MTD) del termo eléctrico día a día: gasto total si el mes está completo o acumulado hasta la fecha seleccionada con proyección a fin de mes."
+    config:
+      access: public
+      contract:
+        enforced: true
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: ['fecha', 'dispositivo_id']
+    columns:
+      - name: anio
+        data_type: integer
+        constraints:
+          - type: not_null
+      - name: anio_mes
+        data_type: varchar
+        constraints:
+          - type: not_null
+      - name: mes_inicio
+        data_type: date
+        constraints:
+          - type: not_null
+      - name: fecha
+        data_type: date
+        constraints:
+          - type: not_null
+      - name: dispositivo_id
+        data_type: varchar
+        constraints:
+          - type: not_null
+      - name: nombre_dispositivo
+        data_type: varchar
+      - name: dias_acumulados
+        data_type: integer
+      - name: dias_totales_mes
+        data_type: integer
+      - name: es_mes_completo
+        data_type: boolean
+      - name: estado_mes
+        data_type: varchar
+      - name: total_horas_on_mes
+        data_type: integer
+      - name: consumo_mes_kwh
+        data_type: float
+      - name: coste_mes_eur
+        data_type: float
+      - name: coste_proyectado_mes_eur
+        data_type: float
+      - name: precio_medio_mes_eur_kwh
+        data_type: float

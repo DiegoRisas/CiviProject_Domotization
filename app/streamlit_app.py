@@ -13,8 +13,9 @@ st.set_page_config(
     layout="wide",
 )
 
-# Cambia a DOMO_DEV_GOLD_DB si todavía estás probando en DEV
-SOURCE_VIEW = "DOMO_PRO_GOLD_DB.ENERGIA.MART_PANEL_TERMO_24H"
+# Cambia a DOMO_PRO_GOLD_DB cuando despliegues a producción
+SOURCE_VIEW = "DOMO_DEV_GOLD_DB.ENERGIA.MART_PANEL_TERMO_24H"
+MONTHLY_VIEW = "DOMO_DEV_GOLD_DB.ENERGIA.MART_RESUMEN_MENSUAL_TERMO"
 
 session = get_active_session()
 
@@ -27,7 +28,16 @@ def load_data(view_name: str) -> pd.DataFrame:
     return df
 
 
+@st.cache_data(ttl=300)
+def load_monthly(view_name: str) -> pd.DataFrame:
+    df_m = session.sql(f"SELECT * FROM {view_name} ORDER BY FECHA DESC").to_pandas()
+    df_m.columns = [c.lower() for c in df_m.columns]
+    df_m["fecha"] = pd.to_datetime(df_m["fecha"]).dt.date
+    return df_m
+
+
 df = load_data(SOURCE_VIEW)
+df_mes = load_monthly(MONTHLY_VIEW)
 
 if df.empty:
     st.warning(f"No hay datos en `{SOURCE_VIEW}`.")
@@ -65,6 +75,9 @@ with col_selector:
         index=default_index,
         format_func=lambda d: d.strftime("%d/%m/%Y"),
     )
+    if st.button("🔄 Recargar datos", use_container_width=True):
+        st.cache_data.clear()
+        st.rerun()
 
 df_day = df[df["fecha"] == fecha_sel].sort_values("hora").copy()
 df_day["hora_label"] = df_day["hora"].apply(lambda h: f"{int(h):02d}:00")
@@ -94,6 +107,29 @@ k1.metric("Coste estimado día", f"{df_day['coste_estimado_eur'].sum():.2f} €"
 k2.metric("Consumo estimado", f"{df_day['consumo_estimado_kwh'].sum():.2f} kWh")
 k3.metric("Horas ON", f"{int((df_day['estado_termo'] == 'ON').sum())} h")
 k4.metric("Temp. media ext.", f"{df_day['temperatura_ext_c'].mean():.1f} °C")
+
+# --- 2b. Tarjetas KPI mensuales acumuladas hasta el día seleccionado (MTD) ---
+row_mes = df_mes[df_mes["fecha"] == fecha_sel]
+
+if not row_mes.empty:
+    m = row_mes.iloc[0]
+    st.subheader(f"Resumen mensual ({m['anio_mes']}) · {m['estado_mes']}")
+    m1, m2, m3, m4 = st.columns(4)
+
+    titulo_coste = (
+        "Gasto total del mes"
+        if m["es_mes_completo"]
+        else f"Acumulado ({int(m['dias_acumulados'])}/{int(m['dias_totales_mes'])} días)"
+    )
+    m1.metric(titulo_coste, f"{m['coste_mes_eur']:.2f} €")
+    m2.metric("Consumo acumulado", f"{m['consumo_mes_kwh']:.1f} kWh")
+    m3.metric("Horas ON acumuladas", f"{int(m['total_horas_on_mes'])} h")
+    m4.metric(
+        "Proyección fin de mes" if not m["es_mes_completo"] else "Precio medio mes",
+        f"{m['coste_proyectado_mes_eur']:.2f} €"
+        if not m["es_mes_completo"]
+        else f"{m['precio_medio_mes_eur_kwh']:.4f} €/kWh",
+    )
 
 st.divider()
 
