@@ -21,6 +21,14 @@ models:
           - not_null
           - accepted_values:
               values: ['Madrugada', 'Mediodia', 'Tarde_Noche']
+      - name: anio
+        description: "Año natural de la marca horaria (YYYY)."
+        data_tests:
+          - not_null
+      - name: anio_mes
+        description: "Identificador año-mes en formato YYYY-MM para agrupaciones mensuales sin mezclar años."
+        data_tests:
+          - not_null
 
   - name: dim_termo
     description: "Dimensión técnica del termo eléctrico (escalable a dim_dispositivos en Fase 2)."

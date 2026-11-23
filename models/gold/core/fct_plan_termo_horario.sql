@@ -31,6 +31,7 @@ base as (
         t.bloque_dia,
         d.termo_sk,
         d.potencia_nominal_kw,
+        d.horas_base_dia,
         c.precio_eur_kwh,
         c.temperatura_ext_c,
         c.humedad_relativa_pct,
@@ -50,9 +51,15 @@ plan_base as (
         *,
         coalesce(temp_media_dia_c < {{ var('umbral_frio_ext_c', 10.0) }}, false) as es_dia_frio,
         case
-            when bloque_dia = 'Madrugada'   and ranking_precio_bloque <= 2 then true
-            when bloque_dia = 'Mediodia'    and ranking_precio_bloque <= 1 then true
-            when bloque_dia = 'Tarde_Noche' and ranking_precio_bloque <= 1 then true
+            when bloque_dia = 'Madrugada'
+                and ranking_precio_bloque <= (floor(horas_base_dia / 3) + case when mod(horas_base_dia, 3) >= 1 then 1 else 0 end)
+                then true
+            when bloque_dia = 'Mediodia'
+                and ranking_precio_bloque <= (floor(horas_base_dia / 3) + case when mod(horas_base_dia, 3) >= 2 then 1 else 0 end)
+                then true
+            when bloque_dia = 'Tarde_Noche'
+                and ranking_precio_bloque <= floor(horas_base_dia / 3)
+                then true
             else false
         end as es_on_base
     from base

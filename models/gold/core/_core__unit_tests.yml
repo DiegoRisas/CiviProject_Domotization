@@ -10,7 +10,7 @@ unit_tests:
     given:
       - input: ref('dim_termo')
         rows:
-          - {termo_sk: 'termo_1', potencia_nominal_kw: 1.2}
+          - {termo_sk: 'termo_1', potencia_nominal_kw: 1.2, horas_base_dia: 4}
       - input: ref('dim_tiempo_horario')
         rows:
           - {fecha_hora_pk: '2026-11-22 02:00:00', fecha: '2026-11-22', hora: 2,  bloque_dia: 'Madrugada'}
