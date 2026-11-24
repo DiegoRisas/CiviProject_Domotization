@@ -213,3 +213,15 @@ models:
         description: "Coste eléctrico estimado en euros si el dispositivo está encendido en esa hora."
         data_tests:
           - not_null
+
+  - name: metricflow_time_spine
+    description: "Espina temporal horaria continua requerida por dbt Semantic Layer (MetricFlow)."
+    time_spine:
+      standard_granularity_column: date_hour
+    columns:
+      - name: date_hour
+        description: "Marca horaria continua (TIMESTAMP_NTZ)."
+        granularity: hour
+        data_tests:
+          - unique
+          - not_null

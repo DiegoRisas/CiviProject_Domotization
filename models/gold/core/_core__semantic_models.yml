@@ -1,0 +1,124 @@
+semantic_models:
+  - name: plan_termo_horario
+    description: "Modelo semántico de hechos con el plan horario ON/OFF, consumo y coste estimado del termo eléctrico."
+    model: ref('fct_plan_termo_horario')
+    defaults:
+      agg_time_dimension: fecha_hora_pk
+    primary_entity: plan_termo_hora
+
+    entities:
+      - name: plan_hora
+        type: foreign
+        expr: fecha_hora_pk
+      - name: termo
+        type: foreign
+        expr: termo_sk
+
+    dimensions:
+      - name: fecha_hora_pk
+        type: time
+        type_params:
+          time_granularity: hour
+      - name: estado_termo
+        type: categorical
+        description: "Estado recomendado del termo (ON u OFF)."
+      - name: color_semaforo
+        type: categorical
+        description: "Color del semáforo operativo (VERDE o ROJO)."
+      - name: es_dia_frio
+        type: categorical
+        description: "Indica si la temperatura media exterior del día está por debajo del umbral de frío."
+
+    measures:
+      - name: coste_estimado_eur
+        agg: sum
+        description: "Suma del coste eléctrico estimado del termo en euros."
+      - name: consumo_estimado_kwh
+        agg: sum
+        description: "Suma del consumo eléctrico estimado del termo en kWh."
+      - name: horas_encendido_medida
+        agg: sum
+        expr: "case when estado_termo = 'ON' then 1 else 0 end"
+        description: "Conteo de horas en las que el termo está encendido (ON)."
+
+  - name: tiempo_horario
+    description: "Dimensión semántica horaria con tramos tarifarios PVPC 2.0TD y bloques del día."
+    model: ref('dim_tiempo_horario')
+    defaults:
+      agg_time_dimension: fecha_hora_pk
+
+    entities:
+      - name: plan_hora
+        type: primary
+        expr: fecha_hora_pk
+
+    dimensions:
+      - name: fecha_hora_pk
+        type: time
+        type_params:
+          time_granularity: hour
+      - name: fecha
+        type: time
+        type_params:
+          time_granularity: day
+      - name: hora
+        type: categorical
+      - name: dia_semana
+        type: categorical
+      - name: es_fin_de_semana
+        type: categorical
+      - name: anio_mes
+        type: categorical
+      - name: tramo_pvpc
+        type: categorical
+        description: "Periodo tarifario PVPC 2.0TD (Valle, Llano o Punta)."
+      - name: bloque_dia
+        type: categorical
+        description: "Franja del día (Madrugada, Mediodia, Tarde_Noche)."
+
+  - name: termo_dim
+    description: "Dimensión semántica con las características técnicas del termo eléctrico."
+    model: ref('dim_termo')
+
+    entities:
+      - name: termo
+        type: primary
+        expr: termo_sk
+
+    dimensions:
+      - name: dispositivo_id
+        type: categorical
+      - name: nombre_dispositivo
+        type: categorical
+
+metrics:
+  - name: coste_termo_eur
+    label: "Coste Termo (€)"
+    description: "Coste eléctrico total estimado del termo en euros."
+    type: simple
+    type_params:
+      measure: coste_estimado_eur
+
+  - name: consumo_termo_kwh
+    label: "Consumo Termo (kWh)"
+    description: "Consumo eléctrico total estimado del termo en kWh."
+    type: simple
+    type_params:
+      measure: consumo_estimado_kwh
+
+  - name: horas_encendido
+    label: "Horas Encendido (h)"
+    description: "Número total de horas con el termo encendido (estado ON)."
+    type: simple
+    type_params:
+      measure: horas_encendido_medida
+
+  - name: precio_medio_efectivo_eur_kwh
+    label: "Precio Medio Efectivo (€/kWh)"
+    description: "Coste real medio por cada kWh consumido durante las horas de encendido del termo."
+    type: derived
+    type_params:
+      expr: coste_termo_eur / nullif(consumo_termo_kwh, 0)
+      metrics:
+        - name: coste_termo_eur
+        - name: consumo_termo_kwh
