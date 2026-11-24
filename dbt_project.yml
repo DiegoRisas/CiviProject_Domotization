@@ -46,7 +46,6 @@ seeds:
         nombre_habitacion: varchar(100)
         temp_confort_min_c: float
         temp_confort_max_c: float
-        es_calefactable: boolean
     catalogo_dispositivos:
       +column_types:
         dispositivo_id: varchar(50)
@@ -83,3 +82,11 @@ models:
         +schema: energia
         +materialized: view
         +tags: ['energy']
+
+
+vars:
+  umbral_frio_ext_c: 10.0
+  horas_extra_frio: 1
+  lookback_hours: 48
+  ratio_cobertura_calefaccion: 0.5
+  max_horas_calefaccion_dia: 8

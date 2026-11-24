@@ -111,3 +111,95 @@ models:
         data_type: float
       - name: precio_medio_mes_eur_kwh
         data_type: float
+  
+  - name: mart_planificador_dispositivos_24h
+    description: "Vista desnormalizada horaria multi-dispositivo (calefactores y electrodomésticos) para planificación flexible de 24h con ranking de prioridad, confort térmico y costes."
+    config:
+      access: public
+      contract:
+        enforced: true
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: ['fecha_hora_pk', 'dispositivo_id']
+    columns:
+      - name: fecha_hora_pk
+        data_type: timestamp_ntz
+        constraints:
+          - type: not_null
+      - name: fecha
+        data_type: date
+        constraints:
+          - type: not_null
+      - name: hora
+        data_type: integer
+        constraints:
+          - type: not_null
+      - name: dia_semana
+        data_type: varchar
+      - name: tramo_pvpc
+        data_type: varchar
+      - name: bloque_dia
+        data_type: varchar
+      - name: dispositivo_id
+        data_type: varchar
+        constraints:
+          - type: not_null
+      - name: nombre_dispositivo
+        data_type: varchar
+      - name: tipo_dispositivo
+        data_type: varchar
+        constraints:
+          - type: not_null
+      - name: habitacion_id
+        data_type: varchar
+        constraints:
+          - type: not_null
+      - name: nombre_habitacion
+        data_type: varchar
+      - name: potencia_nominal_kw
+        data_type: float
+        constraints:
+          - type: not_null
+      - name: precio_eur_kwh
+        data_type: float
+        constraints:
+          - type: not_null
+      - name: temperatura_ext_c
+        data_type: float
+      - name: temp_interior_c
+        data_type: float
+      - name: humedad_interior_pct
+        data_type: float
+      - name: temp_confort_min_c
+        data_type: float
+      - name: temp_confort_max_c
+        data_type: float
+      - name: deficit_termico_c
+        data_type: float
+        constraints:
+          - type: not_null
+      - name: necesita_calor
+        data_type: boolean
+        constraints:
+          - type: not_null
+      - name: horas_minimas_recomendadas_dia
+        data_type: integer
+        constraints:
+          - type: not_null
+      - name: ranking_prioridad_dia
+        data_type: integer
+        constraints:
+          - type: not_null
+      - name: estado_default
+        data_type: varchar
+        constraints:
+          - type: not_null
+      - name: consumo_si_on_kwh
+        data_type: float
+        constraints:
+          - type: not_null
+      - name: coste_si_on_eur
+        data_type: float
+        constraints:
+          - type: not_null

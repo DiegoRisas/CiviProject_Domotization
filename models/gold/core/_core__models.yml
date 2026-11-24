@@ -9,82 +9,57 @@ models:
         data_tests:
           - unique
           - not_null
-      - name: tramo_pvpc
-        description: "Periodo tarifario PVPC 2.0TD (Valle, Llano o Punta)."
-        data_tests:
-          - not_null
-          - accepted_values:
-              values: ['Valle', 'Llano', 'Punta']
-      - name: bloque_dia
-        description: "Franja del día para distribuir el calentamiento del termo."
-        data_tests:
-          - not_null
-          - accepted_values:
-              values: ['Madrugada', 'Mediodia', 'Tarde_Noche']
       - name: anio
         description: "Año natural de la marca horaria (YYYY)."
         data_tests:
           - not_null
       - name: anio_mes
-        description: "Identificador año-mes en formato YYYY-MM para agrupaciones mensuales sin mezclar años."
+        description: "Identificador año-mes en formato YYYY-MM."
+        data_tests:
+          - not_null
+      - name: tramo_pvpc
+        description: "Periodo tarifario PVPC 2.0TD (Valle, Llano o Punta)."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Valle', 'Llano', 'Punta']
+      - name: bloque_dia
+        description: "Franja del día para distribuir el calentamiento del termo."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Madrugada', 'Mediodia', 'Tarde_Noche']
+
+  - name: dim_habitaciones
+    description: "Dimensión de estancias del hogar con temperaturas de confort mínimo y máximo."
+    columns:
+      - name: habitacion_sk
+        description: "Clave subrogada de la habitación."
+        data_tests:
+          - unique
+          - not_null
+      - name: habitacion_id
+        description: "Identificador natural de la habitación."
+        data_tests:
+          - unique
+          - not_null
+      - name: nombre_habitacion
+        description: "Nombre legible de la estancia para visualización."
+        data_tests:
+          - not_null
+      - name: temp_confort_min_c
+        description: "Temperatura mínima de confort térmico (°C)."
+        data_tests:
+          - not_null
+      - name: temp_confort_max_c
+        description: "Temperatura máxima de confort térmico (°C)."
         data_tests:
           - not_null
 
-  - name: dim_termo
-    description: "Dimensión técnica del termo eléctrico (escalable a dim_dispositivos en Fase 2)."
-    columns:
-      - name: termo_sk
-        description: "Clave subrogada del termo."
-        data_tests:
-          - unique
-          - not_null
-      - name: dispositivo_id
-        description: "Identificador natural del dispositivo."
-        data_tests:
-          - unique
-          - not_null
-          
-  - name: fct_plan_termo_horario
-    description: "Tabla de hechos horaria con la recomendación ON/OFF del termo, semáforo y coste estimado."
-    data_tests:
-      - dbt_utils.unique_combination_of_columns:
-          combination_of_columns:
-            - fecha_hora_pk
-            - termo_sk
-    columns:
-      - name: fecha_hora_pk
-        description: "FK a dim_tiempo_horario."
-        data_tests:
-          - not_null
-          - relationships:
-              to: ref('dim_tiempo_horario')
-              field: fecha_hora_pk
-      - name: termo_sk
-        description: "FK a dim_termo."
-        data_tests:
-          - not_null
-          - relationships:
-              to: ref('dim_termo')
-              field: termo_sk
-      - name: estado_termo
-        description: "Estado recomendado del termo (ON u OFF)."
-        data_tests:
-          - not_null
-          - accepted_values:
-              values: ['ON', 'OFF']
-      - name: color_semaforo
-        description: "Color para el panel visual de 24h (VERDE o ROJO)."
-        data_tests:
-          - not_null
-          - accepted_values:
-              values: ['VERDE', 'ROJO']
-      - name: coste_estimado_eur
-        description: "Coste eléctrico estimado de la hora en euros."
-        data_tests:
-          - not_null
- 
   - name: dim_dispositivos
-    description: "Dimensión maestra multi-dispositivo del hogar (termo, calefactores portátiles y electrodomésticos)."
+    description: "Dimensión maestra multi-dispositivo del hogar enriquecida con la estancia asignada."
     columns:
       - name: dispositivo_sk
         description: "Clave subrogada del dispositivo."
@@ -97,13 +72,144 @@ models:
           - unique
           - not_null
       - name: tipo_dispositivo
-        description: "Categoría del dispositivo."
+        description: "Categoría operativa del dispositivo."
         data_tests:
           - not_null
           - accepted_values:
-              values: ['termo', 'calefactor_portatil', 'electrodomestico']
+              arguments:
+                values: ['termo', 'calefactor_portatil', 'electrodomestico']
+      - name: habitacion_id
+        description: "Identificador natural de la habitación."
+        data_tests:
+          - not_null
+      - name: habitacion_sk
+        description: "FK hacia dim_habitaciones."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_habitaciones')
+                field: habitacion_sk
+      - name: nombre_habitacion
+        description: "Nombre legible de la estancia heredado de dim_habitaciones."
+        data_tests:
+          - not_null
       - name: potencia_nominal_kw
         description: "Potencia nominal en kW."
         data_tests:
           - not_null
-  
+
+  - name: dim_termo
+    description: "Dimensión técnica filtrada del termo eléctrico (compatibilidad Fase 1)."
+    columns:
+      - name: termo_sk
+        description: "Clave subrogada del termo."
+        data_tests:
+          - unique
+          - not_null
+      - name: dispositivo_id
+        description: "Identificador natural del dispositivo."
+        data_tests:
+          - unique
+          - not_null
+
+  - name: fct_plan_termo_horario
+    description: "Tabla de hechos horaria con la recomendación ON/OFF del termo, semáforo y coste estimado."
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - fecha_hora_pk
+              - termo_sk
+    columns:
+      - name: fecha_hora_pk
+        description: "FK a dim_tiempo_horario."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_tiempo_horario')
+                field: fecha_hora_pk
+      - name: termo_sk
+        description: "FK a dim_termo."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_termo')
+                field: termo_sk
+      - name: estado_termo
+        description: "Estado recomendado del termo (ON u OFF)."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['ON', 'OFF']
+      - name: color_semaforo
+        description: "Color para el panel visual de 24h (VERDE o ROJO)."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['VERDE', 'ROJO']
+      - name: coste_estimado_eur
+        description: "Coste eléctrico estimado de la hora en euros."
+        data_tests:
+          - not_null
+
+  - name: fct_plan_dispositivos_horario
+    description: "Tabla de hechos incremental horaria multi-dispositivo (calefactores y electrodomésticos) con déficit térmico, horas mínimas recomendadas y ranking de prioridad 1–24."
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - fecha_hora_pk
+              - dispositivo_sk
+    columns:
+      - name: fecha_hora_pk
+        description: "FK a dim_tiempo_horario."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_tiempo_horario')
+                field: fecha_hora_pk
+      - name: dispositivo_sk
+        description: "FK a dim_dispositivos."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_dispositivos')
+                field: dispositivo_sk
+      - name: habitacion_sk
+        description: "FK a dim_habitaciones."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_habitaciones')
+                field: habitacion_sk
+      - name: necesita_calor
+        description: "Flag booleano que indica si temp_interior_c < temp_confort_min_c."
+        data_tests:
+          - not_null
+      - name: horas_minimas_recomendadas_dia
+        description: "Número mínimo de horas ON recomendadas para el día."
+        data_tests:
+          - not_null
+      - name: ranking_prioridad_dia
+        description: "Orden de prioridad diario (1 a 24) para activar el dispositivo según el slider."
+        data_tests:
+          - not_null
+      - name: estado_default
+        description: "Estado recomendado por defecto (ON u OFF)."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['ON', 'OFF']
+      - name: coste_si_on_eur
+        description: "Coste eléctrico estimado en euros si el dispositivo está encendido en esa hora."
+        data_tests:
+          - not_null
