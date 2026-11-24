@@ -40,16 +40,22 @@ seeds:
     +database: "{{ 'DOMO_PRO_SILVER_DB' if target.name == 'pro' else 'DOMO_DEV_SILVER_DB' }}"
     +schema: seeds
     +tags: ['seeds']
+    catalogo_habitaciones:
+      +column_types:
+        habitacion_id: varchar(50)
+        nombre_habitacion: varchar(100)
+        temp_confort_min_c: float
+        temp_confort_max_c: float
+        es_calefactable: boolean
     catalogo_dispositivos:
       +column_types:
         dispositivo_id: varchar(50)
         nombre_dispositivo: varchar(100)
         tipo_dispositivo: varchar(50)
-        habitacion: varchar(50)
+        habitacion_id: varchar(50)
         potencia_nominal_kw: float
         capacidad_litros: integer
         horas_base_dia: integer
-
 
 
 models:

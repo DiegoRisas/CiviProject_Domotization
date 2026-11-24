@@ -1,6 +1,31 @@
 version: 2
 
 seeds:
+  - name: catalogo_habitaciones
+    description: "Catálogo maestro de estancias del hogar con rangos de temperatura de confort y capacidad calefactable."
+    columns:
+      - name: habitacion_id
+        description: "Identificador único de la habitación (clave natural)."
+        data_tests:
+          - unique
+          - not_null
+      - name: nombre_habitacion
+        description: "Nombre legible de la estancia."
+        data_tests:
+          - not_null
+      - name: temp_confort_min_c
+        description: "Temperatura mínima recomendada de confort (°C)."
+        data_tests:
+          - not_null
+      - name: temp_confort_max_c
+        description: "Temperatura máxima recomendada de confort (°C)."
+        data_tests:
+          - not_null
+      - name: es_calefactable
+        description: "Indica si la estancia es objetivo de calefacción."
+        data_tests:
+          - not_null
+
   - name: catalogo_dispositivos
     description: "Catálogo maestro de dispositivos eléctricos del hogar con potencia nominal, habitación y parámetros base de uso."
     columns:
@@ -19,10 +44,13 @@ seeds:
           - not_null
           - accepted_values:
               values: ['termo', 'calefactor_portatil', 'electrodomestico']
-      - name: habitacion
-        description: "Habitación asignada (alineada con los sensores de temperatura de Kaggle)."
+      - name: habitacion_id
+        description: "FK hacia catalogo_habitaciones / slv_domotica__habitaciones."
         data_tests:
           - not_null
+          - relationships:
+              to: ref('catalogo_habitaciones')
+              field: habitacion_id
       - name: potencia_nominal_kw
         description: "Potencia eléctrica nominal en kW."
         data_tests:

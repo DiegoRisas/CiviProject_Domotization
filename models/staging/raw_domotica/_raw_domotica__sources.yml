@@ -2,7 +2,7 @@ version: 2
 
 sources:
   - name: raw_domotica
-    description: "Capa Bronze: lecturas de sensores interiores de Kaggle inyectadas mediante Replay diario y time-shifting."
+    description: "Capa Bronze: lecturas de sensores interiores de temperatura y humedad cargadas en SENSORES_INTERIORES_RAW."
     database: "{{ env_var('DBT_BRONZE_DB', 'DOMO_PRO_BRONZE_DB') }}"
     schema: raw_domotica
     config:
@@ -11,16 +11,16 @@ sources:
         warn_after: { count: 26, period: hour }
         error_after: { count: 48, period: hour }
     tables:
-      - name: sensores_kaggle_raw
-        description: "Lecturas cada ~5 minutos de los 7 sensores de temperatura interior con fecha desplazada al presente."
+      - name: sensores_interiores_raw
+        description: "Lecturas periódicas de sensores interiores de temperatura (°C) y humedad relativa (%)."
         columns:
           - name: ingested_at
-            description: "Timestamp UTC de carga en Snowflake."
+            description: "Timestamp de carga en Snowflake."
+          - name: timestamp_lectura
+            description: "Timestamp local de la lectura del sensor."
           - name: sensor
-            description: "Nombre original del sensor (T_living, T_bedroom1, etc.)."
-          - name: fecha_hora_original
-            description: "Timestamp original del dataset histórico (2019-2020)."
-          - name: fecha_hora_simulada
-            description: "Timestamp desplazado al presente mediante time-shifting."
-          - name: valor
+            description: "Identificador del sensor en bruto (ej. t_bedroom1)."
+          - name: temp_interior_c
             description: "Temperatura interior registrada en °C."
+          - name: humedad_interior_pct
+            description: "Humedad relativa interior registrada en %."

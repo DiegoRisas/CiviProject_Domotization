@@ -1,0 +1,8 @@
+habitacion_id,nombre_habitacion,temp_confort_min_c,temp_confort_max_c
+bathroom,Baño,20.0,23.0
+living,Salón,20.0,22.5
+bedroom1,Dormitorio Principal,18.0,21.0
+kitchen,Cocina,19.0,22.0
+bedroom2,Dormitorio 2,18.0,21.0
+bedroom3,Dormitorio 3,18.0,21.0
+desk,Despacho,19.5,22.0
