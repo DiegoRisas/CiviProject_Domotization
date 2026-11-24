@@ -1,0 +1,26 @@
+version: 2
+
+sources:
+  - name: raw_domotica
+    description: "Capa Bronze: lecturas de sensores interiores de Kaggle inyectadas mediante Replay diario y time-shifting."
+    database: "{{ env_var('DBT_BRONZE_DB', 'DOMO_PRO_BRONZE_DB') }}"
+    schema: raw_domotica
+    config:
+      loaded_at_field: ingested_at
+      freshness:
+        warn_after: { count: 26, period: hour }
+        error_after: { count: 48, period: hour }
+    tables:
+      - name: sensores_kaggle_raw
+        description: "Lecturas cada ~5 minutos de los 7 sensores de temperatura interior con fecha desplazada al presente."
+        columns:
+          - name: ingested_at
+            description: "Timestamp UTC de carga en Snowflake."
+          - name: sensor
+            description: "Nombre original del sensor (T_living, T_bedroom1, etc.)."
+          - name: fecha_hora_original
+            description: "Timestamp original del dataset histórico (2019-2020)."
+          - name: fecha_hora_simulada
+            description: "Timestamp desplazado al presente mediante time-shifting."
+          - name: valor
+            description: "Temperatura interior registrada en °C."

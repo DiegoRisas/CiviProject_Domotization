@@ -43,3 +43,16 @@ USE ROLE DOMO_PRO_TRANSFORM_ROLE;
 USE SECONDARY ROLES NONE;
 USE WAREHOUSE DOMO_WH_PRO;
 SELECT CURRENT_ROLE(), CURRENT_WAREHOUSE();
+
+
+//-----------------------------------------
+
+SELECT *
+FROM SLV_ENERGIA__CONTEXTO_HORARIO
+ORDER BY FECHA_HORA_PK ASC;
+
+-- 1. Ver base de datos, esquema, rol y warehouse activos
+SELECT CURRENT_ROLE(), CURRENT_WAREHOUSE(), CURRENT_DATABASE(), CURRENT_SCHEMA();
+
+-- 2. Buscar la tabla en todas las bases de datos y esquemas a los que tienes acceso
+SHOW TABLES LIKE 'SLV_ENERGIA__CONTEXTO_HORARIO' IN ACCOUNT;

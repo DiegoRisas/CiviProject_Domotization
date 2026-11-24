@@ -15,3 +15,27 @@ models:
           - not_null
       - name: temperatura_ext_c
         description: "Temperatura exterior prevista (°C)."
+
+  - name: slv_domotica__ambiente_horario
+    description: "Tabla incremental horaria por habitación que cruza temperatura interior (Kaggle) con PVPC y clima exterior (Open-Meteo)."
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: ['fecha_hora_pk', 'habitacion']
+    columns:
+      - name: fecha_hora_pk
+        description: "Clave horaria local Europe/Madrid (TIMESTAMP_NTZ)."
+        data_tests:
+          - not_null
+      - name: habitacion
+        description: "Habitación monitorizada."
+        data_tests:
+          - not_null
+      - name: temp_interior_c
+        description: "Temperatura interior media horaria (°C)."
+        data_tests:
+          - not_null
+      - name: precio_eur_kwh
+        description: "Precio PVPC de esa hora (€/kWh)."
+        data_tests:
+          - not_null

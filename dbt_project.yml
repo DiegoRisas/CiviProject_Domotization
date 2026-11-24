@@ -36,16 +36,20 @@ clean-targets:         # directories to be removed by `dbt clean`
 # using the `{{ config(...) }}` macro.
 
 seeds:
-  domotizacion_energia: # <-- Mismo name exacto
+  domotizacion_energia:
     +database: "{{ 'DOMO_PRO_SILVER_DB' if target.name == 'pro' else 'DOMO_DEV_SILVER_DB' }}"
     +schema: seeds
-    catalogo_termo:
+    +tags: ['seeds']
+    catalogo_dispositivos:
       +column_types:
         dispositivo_id: varchar(50)
         nombre_dispositivo: varchar(100)
-        capacidad_litros: integer
+        tipo_dispositivo: varchar(50)
+        habitacion: varchar(50)
         potencia_nominal_kw: float
+        capacidad_litros: integer
         horas_base_dia: integer
+
 
 
 models:

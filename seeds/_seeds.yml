@@ -1,11 +1,11 @@
 version: 2
 
 seeds:
-  - name: catalogo_termo
-    description: "Parámetros técnicos estáticos del termo eléctrico principal (100L, 1200W)."
+  - name: catalogo_dispositivos
+    description: "Catálogo maestro de dispositivos eléctricos del hogar con potencia nominal, habitación y parámetros base de uso."
     columns:
       - name: dispositivo_id
-        description: "Identificador único del dispositivo."
+        description: "Identificador único natural del dispositivo."
         data_tests:
           - unique
           - not_null
@@ -13,15 +13,21 @@ seeds:
         description: "Nombre descriptivo del equipo."
         data_tests:
           - not_null
-      - name: capacidad_litros
-        description: "Capacidad del depósito en litros."
+      - name: tipo_dispositivo
+        description: "Categoría operativa del equipo."
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['termo', 'calefactor_portatil', 'electrodomestico']
+      - name: habitacion
+        description: "Habitación asignada (alineada con los sensores de temperatura de Kaggle)."
         data_tests:
           - not_null
       - name: potencia_nominal_kw
-        description: "Potencia eléctrica nominal en kW (1200W = 1.2 kW)."
+        description: "Potencia eléctrica nominal en kW."
         data_tests:
           - not_null
       - name: horas_base_dia
-        description: "Horas base diarias recomendadas de encendido."
+        description: "Horas base diarias recomendadas de funcionamiento."
         data_tests:
           - not_null

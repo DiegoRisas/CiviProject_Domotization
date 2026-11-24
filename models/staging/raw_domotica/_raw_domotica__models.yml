@@ -1,0 +1,24 @@
+version: 2
+
+models:
+  - name: stg_kaggle__sensores_interiores
+    description: "Vista de staging con temperatura interior media horaria por habitación (grano: fecha_hora_pk + habitacion)."
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: ['fecha_hora_pk', 'habitacion']
+    columns:
+      - name: fecha_hora_pk
+        description: "Fecha y hora local (Europe/Madrid) truncada a la hora en TIMESTAMP_NTZ."
+        data_tests:
+          - not_null
+      - name: habitacion
+        description: "Nombre limpio de la habitación alineado con dim_dispositivos."
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['bathroom', 'bedroom1', 'bedroom2', 'bedroom3', 'desk', 'kitchen', 'living']
+      - name: temp_interior_c
+        description: "Temperatura interior media de la hora en °C."
+        data_tests:
+          - not_null

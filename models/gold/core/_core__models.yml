@@ -82,5 +82,28 @@ models:
         description: "Coste eléctrico estimado de la hora en euros."
         data_tests:
           - not_null
-
+ 
+  - name: dim_dispositivos
+    description: "Dimensión maestra multi-dispositivo del hogar (termo, calefactores portátiles y electrodomésticos)."
+    columns:
+      - name: dispositivo_sk
+        description: "Clave subrogada del dispositivo."
+        data_tests:
+          - unique
+          - not_null
+      - name: dispositivo_id
+        description: "Identificador natural del dispositivo."
+        data_tests:
+          - unique
+          - not_null
+      - name: tipo_dispositivo
+        description: "Categoría del dispositivo."
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['termo', 'calefactor_portatil', 'electrodomestico']
+      - name: potencia_nominal_kw
+        description: "Potencia nominal en kW."
+        data_tests:
+          - not_null
   
