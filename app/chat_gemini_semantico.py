@@ -10,22 +10,26 @@ import snowflake.connector
 warnings.filterwarnings("ignore", category=FutureWarning, module="snowflake.connector")
 load_dotenv()
 
-SEMANTIC_YAML_PATH = Path("models/gold/core/_core__semantic_models.yml")
+SEMANTIC_VIEW_SQL_PATH = Path("models/gold/energy/sv_plan_termo.sql")
 
 
-def ejecutar_sql_gold(sql: str) -> str:
-    """Ejecuta una consulta SELECT de solo lectura en Snowflake (capa Gold) y devuelve los resultados."""
+def ejecutar_sql_semantic_view(sql: str) -> str:
+    """Ejecuta una consulta SELECT gobernada contra la Snowflake Semantic View SV_PLAN_TERMO."""
     sql_limpio = sql.strip().rstrip(";")
-    if not sql_limpio.lower().startswith(("select", "with")):
-        return "Error de seguridad: solo se permiten consultas SELECT o WITH."
+    sql_lower = sql_limpio.lower()
 
-    print(f"\n[SQL Gobernado ejecutado en Snowflake]\n{sql_limpio}\n")
+    if not sql_lower.startswith(("select", "with")):
+        return "Error de seguridad: solo se permiten consultas SELECT o WITH."
+    if "semantic_view(" not in sql_lower:
+        return "Error de gobierno: debes consultar obligatoriamente usando FROM SEMANTIC_VIEW(...)."
+
+    print(f"\n[SQL sobre Snowflake Semantic View]\n{sql_limpio}\n")
 
     conn = snowflake.connector.connect(
         account=os.environ["SNOWFLAKE_ACCOUNT"],
         user=os.environ["SNOWFLAKE_USER"],
         password=os.environ["SNOWFLAKE_PASSWORD"],
-        role=os.getenv("SNOWFLAKE_ROLE", "DOMO_REPORTING_ROLE"),
+        role=os.getenv("SNOWFLAKE_ROLE", "DOMO_SEMANTIC_AI_ROLE"),
         warehouse=os.getenv("SNOWFLAKE_WAREHOUSE", "DOMO_WH_DEV"),
         database=os.getenv("SNOWFLAKE_DATABASE", "DOMO_DEV_GOLD_DB"),
         schema="ENERGIA",
@@ -45,7 +49,7 @@ def ejecutar_sql_gold(sql: str) -> str:
 
 
 def obtener_modelos_texto(client) -> list[str]:
-    """Obtiene solo los modelos Gemini de texto activos en tu API Key (sin 2.5 ni imagen)."""
+    """Obtiene los modelos Gemini de texto activos en tu API Key."""
     preferidos = [
         "gemini-3-flash",
         "gemini-3.1-pro",
@@ -74,7 +78,6 @@ def obtener_modelos_texto(client) -> list[str]:
 
 
 def consultar_con_fallback(client, modelos, config, historial, pregunta):
-    """Ejecuta la consulta saltando al instante (sin esperas) si un modelo da 404/429/503."""
     ultimo_error = None
     for modelo in modelos:
         try:
@@ -92,31 +95,37 @@ def consultar_con_fallback(client, modelos, config, historial, pregunta):
 
 
 def iniciar_chat():
-    if not SEMANTIC_YAML_PATH.exists():
+    if not SEMANTIC_VIEW_SQL_PATH.exists():
         raise FileNotFoundError(
-            f"No se encuentra {SEMANTIC_YAML_PATH}. Ejecuta desde la raíz del repo."
+            f"No se encuentra {SEMANTIC_VIEW_SQL_PATH}. Ejecuta git pull desde la raíz del repo."
         )
 
-    definicion_semantica = SEMANTIC_YAML_PATH.read_text(encoding="utf-8")
+    definicion_sv = SEMANTIC_VIEW_SQL_PATH.read_text(encoding="utf-8")
     db_actual = os.getenv("SNOWFLAKE_DATABASE", "DOMO_DEV_GOLD_DB")
+    sv_fqn = f"{db_actual}.ENERGIA.SV_PLAN_TERMO"
 
     system_instruction = (
-        "Eres un analista energético experto que responde en español sobre los datos domóticos del usuario.\n"
-        "Para responder cualquier pregunta numérica o de horarios, debes usar OBLIGATORIAMENTE la herramienta ejecutar_sql_gold "
-        "respetando al pie de la letra las entidades, dimensiones, medidas y fórmulas de esta capa semántica de dbt:\n\n"
-        + definicion_semantica
-        + "\n\nReglas de generación SQL para Snowflake:\n"
-        f"- Tabla de hechos: {db_actual}.ENERGIA.FCT_PLAN_TERMO_HORARIO\n"
-        f"- Dimensiones: {db_actual}.CORE.DIM_TIEMPO_HORARIO y {db_actual}.CORE.DIM_TERMO\n"
-        "- Une FCT_PLAN_TERMO_HORARIO con DIM_TIEMPO_HORARIO usando fecha_hora_pk y con DIM_TERMO usando termo_sk.\n"
-        "- Para referencias relativas como 'hoy' o 'esta semana', usa CONVERT_TIMEZONE('Europe/Madrid', CURRENT_TIMESTAMP())::DATE en Snowflake.\n"
-        "- Respeta exactamente las fórmulas de las métricas (por ejemplo, horas_encendido suma "
-        "CASE WHEN estado_termo = 'ON' THEN 1 ELSE 0 END, y precio_medio_efectivo_eur_kwh divide "
-        "SUM(coste_estimado_eur) / NULLIF(SUM(consumo_estimado_kwh), 0)).\n"
-        "- Nunca inventes cifras ni fórmulas fuera de este YAML.\n"
+        "Eres un analista energético experto que responde en español sobre el termo eléctrico del usuario.\n"
+        "Para cualquier pregunta sobre horarios, consumos o costes, debes usar OBLIGATORIAMENTE la herramienta "
+        "ejecutar_sql_semantic_view consultando la Snowflake Semantic View nativa:\n"
+        f"  {sv_fqn}\n\n"
+        "Definición oficial de la Semantic View en dbt:\n"
+        + definicion_sv
+        + "\n\nReglas estrictas de sintaxis SEMANTIC_VIEW en Snowflake:\n"
+        f"- Usa SIEMPRE el formato:\n"
+        f"  SELECT * FROM SEMANTIC_VIEW(\n"
+        f"      {sv_fqn}\n"
+        "      DIMENSIONS <lista de dimensiones cualificadas, ej. tiempo.hora, tiempo.tramo_pvpc>\n"
+        "      METRICS <lista de métricas cualificadas, ej. plan_termo.coste_termo_eur>\n"
+        "      WHERE <condiciones sobre dimensiones o facts>\n"
+        "  ) ORDER BY ...\n"
+        "- No escribas JOINs manuales ni consultes tablas base directamente; Snowflake resuelve los joins.\n"
+        "- No mezcles FACTS y METRICS en la misma llamada SEMANTIC_VIEW(). Si necesitas datos horarios de encendido "
+        "(sin agregar o por hora), usa DIMENSIONS + METRICS o DIMENSIONS + FACTS.\n"
+        "- Para 'hoy' o 'esta semana' usa CONVERT_TIMEZONE('Europe/Madrid', CURRENT_TIMESTAMP())::DATE.\n"
+        "- Nunca inventes cifras ni fórmulas fuera de la Semantic View.\n"
     )
 
-    # attempts=1 evita que el SDK se quede bloqueado 60s reintentando un 503
     client = genai.Client(
         api_key=os.environ["GEMINI_API_KEY"],
         http_options=types.HttpOptions(retry_options=types.HttpRetryOptions(attempts=1)),
@@ -125,13 +134,13 @@ def iniciar_chat():
 
     config = types.GenerateContentConfig(
         system_instruction=system_instruction,
-        tools=[ejecutar_sql_gold],
+        tools=[ejecutar_sql_semantic_view],
         temperature=0.0,
     )
     historial = []
 
     print(
-        f"Asistente semántico conectado a {db_actual} ({os.getenv('SNOWFLAKE_ROLE', 'DOMO_REPORTING_ROLE')})."
+        f"Asistente conectado a Semantic View {sv_fqn} ({os.getenv('SNOWFLAKE_ROLE', 'DOMO_REPORTING_ROLE')})."
     )
     print(f"Modelos disponibles: {', '.join(modelos)}")
     print("Escribe 'salir' para terminar.\n")
