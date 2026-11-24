@@ -19,14 +19,22 @@ unit_tests:
           - {fecha_hora_pk: '2026-11-22 13:00:00', fecha: '2026-11-22', hora: 13, bloque_dia: 'Mediodia'}
           - {fecha_hora_pk: '2026-11-22 22:00:00', fecha: '2026-11-22', hora: 22, bloque_dia: 'Tarde_Noche'}
           - {fecha_hora_pk: '2026-11-22 23:00:00', fecha: '2026-11-22', hora: 23, bloque_dia: 'Tarde_Noche'}
-      - input: ref('slv_energia__contexto_horario')
+      - input: ref('slv_energia__precios_pvpc')
         rows:
-          - {fecha_hora_pk: '2026-11-22 02:00:00', precio_eur_kwh: 0.08, temperatura_ext_c: 8.0, humedad_relativa_pct: 60}
-          - {fecha_hora_pk: '2026-11-22 03:00:00', precio_eur_kwh: 0.09, temperatura_ext_c: 8.0, humedad_relativa_pct: 60}
-          - {fecha_hora_pk: '2026-11-22 12:00:00', precio_eur_kwh: 0.10, temperatura_ext_c: 8.0, humedad_relativa_pct: 60}
-          - {fecha_hora_pk: '2026-11-22 13:00:00', precio_eur_kwh: 0.12, temperatura_ext_c: 8.0, humedad_relativa_pct: 60}
-          - {fecha_hora_pk: '2026-11-22 22:00:00', precio_eur_kwh: 0.11, temperatura_ext_c: 8.0, humedad_relativa_pct: 60}
-          - {fecha_hora_pk: '2026-11-22 23:00:00', precio_eur_kwh: 0.20, temperatura_ext_c: 8.0, humedad_relativa_pct: 60}
+          - {fecha_hora_pk: '2026-11-22 02:00:00', precio_eur_kwh: 0.08}
+          - {fecha_hora_pk: '2026-11-22 03:00:00', precio_eur_kwh: 0.09}
+          - {fecha_hora_pk: '2026-11-22 12:00:00', precio_eur_kwh: 0.10}
+          - {fecha_hora_pk: '2026-11-22 13:00:00', precio_eur_kwh: 0.12}
+          - {fecha_hora_pk: '2026-11-22 22:00:00', precio_eur_kwh: 0.11}
+          - {fecha_hora_pk: '2026-11-22 23:00:00', precio_eur_kwh: 0.20}
+      - input: ref('slv_clima__prediccion_horaria')
+        rows:
+          - {fecha_hora_pk: '2026-11-22 02:00:00', ubicacion: 'Granada', temperatura_ext_c: 8.0, humedad_relativa_pct: 60}
+          - {fecha_hora_pk: '2026-11-22 03:00:00', ubicacion: 'Granada', temperatura_ext_c: 8.0, humedad_relativa_pct: 60}
+          - {fecha_hora_pk: '2026-11-22 12:00:00', ubicacion: 'Granada', temperatura_ext_c: 8.0, humedad_relativa_pct: 60}
+          - {fecha_hora_pk: '2026-11-22 13:00:00', ubicacion: 'Granada', temperatura_ext_c: 8.0, humedad_relativa_pct: 60}
+          - {fecha_hora_pk: '2026-11-22 22:00:00', ubicacion: 'Granada', temperatura_ext_c: 8.0, humedad_relativa_pct: 60}
+          - {fecha_hora_pk: '2026-11-22 23:00:00', ubicacion: 'Granada', temperatura_ext_c: 8.0, humedad_relativa_pct: 60}
     expect:
       rows:
         - {fecha_hora_pk: '2026-11-22 02:00:00', es_dia_frio: true, estado_termo: 'ON',  color_semaforo: 'VERDE'}
@@ -35,3 +43,47 @@ unit_tests:
         - {fecha_hora_pk: '2026-11-22 13:00:00', es_dia_frio: true, estado_termo: 'ON',  color_semaforo: 'VERDE'}
         - {fecha_hora_pk: '2026-11-22 22:00:00', es_dia_frio: true, estado_termo: 'ON',  color_semaforo: 'VERDE'}
         - {fecha_hora_pk: '2026-11-22 23:00:00', es_dia_frio: true, estado_termo: 'OFF', color_semaforo: 'ROJO'}
+
+  - name: test_plan_dispositivos_calefactor_prioriza_frio_barato
+    description: "Verifica que un calefactor prioriza las horas con déficit térmico ordenadas por precio PVPC y calcula bien horas_minimas_recomendadas_dia."
+    model: fct_plan_dispositivos_horario
+    overrides:
+      macros:
+        is_incremental: false
+    given:
+      - input: ref('dim_dispositivos')
+        rows:
+          - {dispositivo_sk: 'calef_1', tipo_dispositivo: 'calefactor_portatil', habitacion_id: 'living', habitacion_sk: 'hab_living', potencia_nominal_kw: 2.0, horas_base_dia: 3}
+      - input: ref('dim_habitaciones')
+        rows:
+          - {habitacion_sk: 'hab_living', temp_confort_min_c: 20.0, temp_confort_max_c: 22.0}
+      - input: ref('dim_tiempo_horario')
+        rows:
+          - {fecha_hora_pk: '2026-11-22 08:00:00', fecha: '2026-11-22', hora: 8}
+          - {fecha_hora_pk: '2026-11-22 12:00:00', fecha: '2026-11-22', hora: 12}
+          - {fecha_hora_pk: '2026-11-22 18:00:00', fecha: '2026-11-22', hora: 18}
+          - {fecha_hora_pk: '2026-11-22 22:00:00', fecha: '2026-11-22', hora: 22}
+      - input: ref('slv_energia__precios_pvpc')
+        rows:
+          - {fecha_hora_pk: '2026-11-22 08:00:00', fecha: '2026-11-22', precio_eur_kwh: 0.15}
+          - {fecha_hora_pk: '2026-11-22 12:00:00', fecha: '2026-11-22', precio_eur_kwh: 0.05}
+          - {fecha_hora_pk: '2026-11-22 18:00:00', fecha: '2026-11-22', precio_eur_kwh: 0.25}
+          - {fecha_hora_pk: '2026-11-22 22:00:00', fecha: '2026-11-22', precio_eur_kwh: 0.10}
+      - input: ref('slv_clima__prediccion_horaria')
+        rows:
+          - {fecha_hora_pk: '2026-11-22 08:00:00', ubicacion: 'Granada', temperatura_ext_c: 9.0}
+          - {fecha_hora_pk: '2026-11-22 12:00:00', ubicacion: 'Granada', temperatura_ext_c: 15.0}
+          - {fecha_hora_pk: '2026-11-22 18:00:00', ubicacion: 'Granada', temperatura_ext_c: 11.0}
+          - {fecha_hora_pk: '2026-11-22 22:00:00', ubicacion: 'Granada', temperatura_ext_c: 8.0}
+      - input: ref('slv_domotica__lecturas_sensores')
+        rows:
+          - {fecha_hora_pk: '2026-11-22 08:00:00', habitacion_id: 'living', temp_interior_c: 18.0, humedad_interior_pct: 55.0}
+          - {fecha_hora_pk: '2026-11-22 12:00:00', habitacion_id: 'living', temp_interior_c: 21.5, humedad_interior_pct: 50.0}
+          - {fecha_hora_pk: '2026-11-22 18:00:00', habitacion_id: 'living', temp_interior_c: 19.0, humedad_interior_pct: 52.0}
+          - {fecha_hora_pk: '2026-11-22 22:00:00', habitacion_id: 'living', temp_interior_c: 18.5, humedad_interior_pct: 54.0}
+    expect:
+      rows:
+        - {fecha_hora_pk: '2026-11-22 22:00:00', necesita_calor: true,  horas_minimas_recomendadas_dia: 2, ranking_prioridad_dia: 1, estado_default: 'ON'}
+        - {fecha_hora_pk: '2026-11-22 08:00:00', necesita_calor: true,  horas_minimas_recomendadas_dia: 2, ranking_prioridad_dia: 2, estado_default: 'ON'}
+        - {fecha_hora_pk: '2026-11-22 18:00:00', necesita_calor: true,  horas_minimas_recomendadas_dia: 2, ranking_prioridad_dia: 3, estado_default: 'OFF'}
+        - {fecha_hora_pk: '2026-11-22 12:00:00', necesita_calor: false, horas_minimas_recomendadas_dia: 2, ranking_prioridad_dia: 4, estado_default: 'OFF'}

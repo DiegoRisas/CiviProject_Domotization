@@ -5,14 +5,20 @@
     on_schema_change='append_new_columns'
 ) }}
 
-with contexto as (
-    select * from {{ ref('slv_energia__contexto_horario') }}
+with precios as (
+    select * from {{ ref('slv_energia__precios_pvpc') }}
     {% if is_incremental() %}
     where fecha >= (
         select dateadd('hour', -{{ var('lookback_hours', 48) }}, max(fecha_hora_pk))::date
         from {{ this }}
     )
     {% endif %}
+),
+
+clima as (
+    select *
+    from {{ ref('slv_clima__prediccion_horaria') }}
+    where ubicacion = 'Granada'
 ),
 
 tiempo as (
@@ -25,24 +31,26 @@ termo as (
 
 base as (
     select
-        c.fecha_hora_pk,
+        p.fecha_hora_pk,
         t.fecha,
         t.hora,
         t.bloque_dia,
         d.termo_sk,
         d.potencia_nominal_kw,
         d.horas_base_dia,
-        c.precio_eur_kwh,
+        p.precio_eur_kwh,
         c.temperatura_ext_c,
         c.humedad_relativa_pct,
         avg(c.temperatura_ext_c) over (partition by t.fecha) as temp_media_dia_c,
         row_number() over (
             partition by t.fecha, d.termo_sk, t.bloque_dia
-            order by c.precio_eur_kwh asc, t.hora asc
+            order by p.precio_eur_kwh asc, t.hora asc
         ) as ranking_precio_bloque
-    from contexto as c
+    from precios as p
+    left join clima as c
+        on p.fecha_hora_pk = c.fecha_hora_pk
     inner join tiempo as t
-        on c.fecha_hora_pk = t.fecha_hora_pk
+        on p.fecha_hora_pk = t.fecha_hora_pk
     cross join termo as d
 ),
 

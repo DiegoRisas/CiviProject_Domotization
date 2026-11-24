@@ -1,11 +1,33 @@
 version: 2
 
 seeds:
-  - name: catalogo_termo
-    description: "Parámetros técnicos estáticos del termo eléctrico principal (100L, 1200W)."
+  - name: catalogo_habitaciones
+    description: "Catálogo maestro de estancias del hogar con rangos de temperatura de confort y capacidad calefactable."
+    columns:
+      - name: habitacion_id
+        description: "Identificador único de la habitación (clave natural)."
+        data_tests:
+          - unique
+          - not_null
+      - name: nombre_habitacion
+        description: "Nombre legible de la estancia."
+        data_tests:
+          - not_null
+      - name: temp_confort_min_c
+        description: "Temperatura mínima recomendada de confort (°C)."
+        data_tests:
+          - not_null
+      - name: temp_confort_max_c
+        description: "Temperatura máxima recomendada de confort (°C)."
+        data_tests:
+          - not_null
+
+
+  - name: catalogo_dispositivos
+    description: "Catálogo maestro de dispositivos eléctricos del hogar con potencia nominal, habitación y parámetros base de uso."
     columns:
       - name: dispositivo_id
-        description: "Identificador único del dispositivo."
+        description: "Identificador único natural del dispositivo."
         data_tests:
           - unique
           - not_null
@@ -13,15 +35,24 @@ seeds:
         description: "Nombre descriptivo del equipo."
         data_tests:
           - not_null
-      - name: capacidad_litros
-        description: "Capacidad del depósito en litros."
+      - name: tipo_dispositivo
+        description: "Categoría operativa del equipo."
         data_tests:
           - not_null
+          - accepted_values:
+              values: ['termo', 'calefactor_portatil', 'electrodomestico']
+      - name: habitacion_id
+        description: "FK hacia catalogo_habitaciones / slv_domotica__habitaciones."
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('catalogo_habitaciones')
+              field: habitacion_id
       - name: potencia_nominal_kw
-        description: "Potencia eléctrica nominal en kW (1200W = 1.2 kW)."
+        description: "Potencia eléctrica nominal en kW."
         data_tests:
           - not_null
       - name: horas_base_dia
-        description: "Horas base diarias recomendadas de encendido."
+        description: "Horas base diarias recomendadas de funcionamiento."
         data_tests:
           - not_null

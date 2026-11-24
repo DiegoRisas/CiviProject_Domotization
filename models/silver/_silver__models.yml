@@ -1,8 +1,8 @@
 version: 2
 
 models:
-  - name: slv_energia__contexto_horario
-    description: "Tabla horaria unificada (1:1) con precio PVPC y previsión meteorológica exterior de Granada."
+  - name: slv_energia__precios_pvpc
+    description: "Serie temporal horaria deduplicada con precios oficiales PVPC (indicador 1001) en €/kWh."
     columns:
       - name: fecha_hora_pk
         description: "Clave primaria horaria en hora local Europe/Madrid (TIMESTAMP_NTZ)."
@@ -13,5 +13,95 @@ models:
         description: "Precio oficial PVPC en €/kWh."
         data_tests:
           - not_null
+
+  - name: slv_clima__prediccion_horaria
+    description: "Serie temporal horaria deduplicada con previsión meteorológica exterior (Open-Meteo)."
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: ['fecha_hora_pk', 'ubicacion']
+    columns:
+      - name: fecha_hora_pk
+        description: "Marca horaria en hora local Europe/Madrid (TIMESTAMP_NTZ)."
+        data_tests:
+          - not_null
+      - name: ubicacion
+        description: "Ubicación consultada (ej. Granada)."
+        data_tests:
+          - not_null
       - name: temperatura_ext_c
-        description: "Temperatura exterior prevista (°C)."
+        description: "Temperatura exterior prevista a 2 metros (°C)."
+        data_tests:
+          - not_null
+
+  - name: slv_domotica__habitaciones
+    description: "Maestro normalizado de estancias del hogar con rangos de confort térmico."
+    columns:
+      - name: habitacion_id
+        description: "Clave primaria natural de la habitación."
+        data_tests:
+          - unique
+          - not_null
+      - name: nombre_habitacion
+        data_tests:
+          - not_null
+      - name: temp_confort_min_c
+        data_tests:
+          - not_null
+      - name: temp_confort_max_c
+        data_tests:
+          - not_null
+
+
+  - name: slv_domotica__dispositivos
+    description: "Maestro normalizado de dispositivos eléctricos del hogar."
+    columns:
+      - name: dispositivo_id
+        description: "Clave primaria natural del dispositivo."
+        data_tests:
+          - unique
+          - not_null
+      - name: tipo_dispositivo
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['termo', 'calefactor_portatil', 'electrodomestico']
+      - name: habitacion_id
+        description: "FK hacia slv_domotica__habitaciones."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_domotica__habitaciones')
+                field: habitacion_id
+      - name: potencia_nominal_kw
+        data_tests:
+          - not_null
+
+  - name: slv_domotica__lecturas_sensores
+    description: "Serie temporal horaria deduplicada y agregada de temperatura y humedad interior por habitación."
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: ['fecha_hora_pk', 'habitacion_id']
+    columns:
+      - name: fecha_hora_pk
+        description: "Marca horaria en hora local Europe/Madrid (TIMESTAMP_NTZ)."
+        data_tests:
+          - not_null
+      - name: habitacion_id
+        description: "FK hacia slv_domotica__habitaciones."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_domotica__habitaciones')
+                field: habitacion_id
+      - name: temp_interior_c
+        description: "Temperatura interior media horaria (°C)."
+        data_tests:
+          - not_null
+      - name: num_lecturas
+        description: "Número de lecturas de sensor agregadas en la hora."
+        data_tests:
+          - not_null

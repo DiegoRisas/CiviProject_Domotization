@@ -7,7 +7,6 @@ models:
       - name: fecha_hora_pk
         description: "Fecha y hora local (Europe/Madrid) en formato TIMESTAMP_NTZ."
         data_tests:
-          - unique
           - not_null
       - name: precio_eur_kwh
         description: "Precio oficial PVPC convertido a €/kWh."
@@ -20,7 +19,6 @@ models:
       - name: fecha_hora_pk
         description: "Fecha y hora local (Europe/Madrid) en formato TIMESTAMP_NTZ."
         data_tests:
-          - unique
           - not_null
       - name: temperatura_ext_c
         description: "Temperatura exterior prevista a 2 metros (°C)."

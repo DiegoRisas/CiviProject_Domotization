@@ -1,0 +1,26 @@
+version: 2
+
+sources:
+  - name: raw_domotica
+    description: "Capa Bronze: lecturas de sensores interiores de temperatura y humedad cargadas en SENSORES_INTERIORES_RAW."
+    database: "{{ env_var('DBT_BRONZE_DB', 'DOMO_PRO_BRONZE_DB') }}"
+    schema: raw_domotica
+    config:
+      loaded_at_field: ingested_at
+      freshness:
+        warn_after: { count: 26, period: hour }
+        error_after: { count: 48, period: hour }
+    tables:
+      - name: sensores_interiores_raw
+        description: "Lecturas periódicas de sensores interiores de temperatura (°C) y humedad relativa (%)."
+        columns:
+          - name: ingested_at
+            description: "Timestamp de carga en Snowflake."
+          - name: timestamp_lectura
+            description: "Timestamp local de la lectura del sensor."
+          - name: sensor
+            description: "Identificador del sensor en bruto (ej. t_bedroom1)."
+          - name: temp_interior_c
+            description: "Temperatura interior registrada en °C."
+          - name: humedad_interior_pct
+            description: "Humedad relativa interior registrada en %."

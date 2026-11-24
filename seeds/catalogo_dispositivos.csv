@@ -1,0 +1,5 @@
+dispositivo_id,nombre_dispositivo,tipo_dispositivo,habitacion_id,potencia_nominal_kw,capacidad_litros,horas_base_dia
+TERMO_01,Termo Electrico 100L,termo,bathroom,1.2,100,4
+CALEF_SALON_01,Calefactor Portatil Salon,calefactor_portatil,living,2.0,,3
+CALEF_DORM_01,Calefactor Portatil Dormitorio,calefactor_portatil,bedroom1,1.5,,2
+LAVADORA_01,Lavadora Principal,electrodomestico,kitchen,2.0,,2

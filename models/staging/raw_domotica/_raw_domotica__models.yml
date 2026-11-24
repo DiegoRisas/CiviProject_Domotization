@@ -1,0 +1,22 @@
+version: 2
+
+models:
+  - name: stg_domotica__sensores_interiores
+    description: "Vista de staging con lecturas limpias y tipadas de sensores interiores (sin deduplicar ni agregar)."
+    columns:
+      - name: fecha_hora_lectura
+        description: "Timestamp exacto de la lectura en formato TIMESTAMP_NTZ."
+        data_tests:
+          - not_null
+      - name: fecha_hora_pk
+        description: "Timestamp truncado a la hora en formato TIMESTAMP_NTZ."
+        data_tests:
+          - not_null
+      - name: habitacion_id
+        description: "Identificador limpio de la habitación normalizado desde el nombre del sensor."
+        data_tests:
+          - not_null
+      - name: temp_interior_c
+        description: "Temperatura interior en °C."
+        data_tests:
+          - not_null
