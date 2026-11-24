@@ -3,7 +3,7 @@ with contexto as (
         fecha_hora_pk,
         fecha,
         hora
-    from {{ ref('slv_energia__contexto_horario') }}
+    from {{ ref('slv_energia__precios_pvpc') }}
 )
 
 select

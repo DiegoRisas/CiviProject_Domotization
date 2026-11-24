@@ -2,6 +2,6 @@
 select
     fecha,
     count(*) as total_horas
-from {{ ref('slv_energia__contexto_horario') }}
+from {{ ref('slv_energia__precios_pvpc') }}
 group by fecha
 having count(*) not in (23, 24, 25)

@@ -21,10 +21,7 @@ seeds:
         description: "Temperatura máxima recomendada de confort (°C)."
         data_tests:
           - not_null
-      - name: es_calefactable
-        description: "Indica si la estancia es objetivo de calefacción."
-        data_tests:
-          - not_null
+
 
   - name: catalogo_dispositivos
     description: "Catálogo maestro de dispositivos eléctricos del hogar con potencia nominal, habitación y parámetros base de uso."
