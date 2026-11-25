@@ -56,3 +56,47 @@ SELECT CURRENT_ROLE(), CURRENT_WAREHOUSE(), CURRENT_DATABASE(), CURRENT_SCHEMA()
 
 -- 2. Buscar la tabla en todas las bases de datos y esquemas a los que tienes acceso
 SHOW TABLES LIKE 'SLV_ENERGIA__CONTEXTO_HORARIO' IN ACCOUNT;
+
+//-------------------------------------------------
+//Comprobaciones del nuevo silver 3FN
+
+USE ROLE DOMO_DEV_TRANSFORM_ROLE;
+USE WAREHOUSE DOMO_WH_DEV;
+USE DATABASE DOMO_DEV_SILVER_DB;
+
+-- =============================================================================
+-- 1. SEEDS (Esquema SEEDS)
+-- =============================================================================
+SELECT * FROM SEEDS.CATALOGO_HABITACIONES ORDER BY HABITACION_ID;
+
+SELECT * FROM SEEDS.CATALOGO_DISPOSITIVOS ORDER BY DISPOSITIVO_ID;
+
+-- =============================================================================
+-- 2. SILVER EN 3FN (Esquema SILVER)
+-- =============================================================================
+
+-- Maestros normalizados
+SELECT * FROM SILVER.SLV_DOMOTICA__HABITACIONES ORDER BY HABITACION_ID;
+
+SELECT * FROM SILVER.SLV_DOMOTICA__DISPOSITIVOS ORDER BY DISPOSITIVO_ID;
+
+-- Series temporales horarias (ordenadas por las más recientes)
+SELECT * FROM SILVER.SLV_ENERGIA__PRECIOS_PVPC ORDER BY FECHA_HORA_PK DESC LIMIT 100;
+
+SELECT * FROM SILVER.SLV_CLIMA__PREDICCION_HORARIA ORDER BY FECHA_HORA_PK DESC, UBICACION LIMIT 100;
+
+SELECT * FROM SILVER.SLV_DOMOTICA__LECTURAS_SENSORES ORDER BY FECHA_HORA_PK DESC, HABITACION_ID LIMIT 100;
+
+
+
+// -----------------------------------------------------------------------------------
+SHOW CORTEX BASE MODELS IN SCHEMA SNOWFLAKE.MODELS;
+
+SHOW PARAMETERS LIKE 'CORTEX_ENABLED_CROSS_REGION' IN ACCOUNT;
+
+ALTER ACCOUNT SET CORTEX_ENABLED_CROSS_REGION = 'AWS_EU';
+
+SELECT SNOWFLAKE.CORTEX.COMPLETE(
+  'mistral-large2',
+  'Responde en una palabra: ¿funciona?'
+) AS respuesta;
